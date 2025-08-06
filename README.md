@@ -207,7 +207,16 @@ ShareSuite is a mod with a multitude of systems designed around sharing the thin
 
 [![Build](https://img.shields.io/travis/com/FunkFrog/RoR2SharedItems?label=Build&style=flat-square)](https://travis-ci.com/FunkFrog/RoR2SharedItems)[![Latest commit to Master](https://img.shields.io/github/last-commit/FunkFrog/RoR2SharedItems/master?label=Latest%20Commit%20%28master%29&style=flat-square)](https://github.com/FunkFrog/RoR2SharedItems)[![Latest commit to Dev](https://img.shields.io/github/last-commit/FunkFrog/RoR2SharedItems/dev?label=Latest%20Commit%20%28dev%29&style=flat-square)](https://github.com/FunkFrog/RoR2SharedItems/tree/dev)
 
-### `2.8.0 (Current Release)`
+### `3.0.0 (Current Release)`
+- DLC 2 (Seekers of the Storm) Compatibility Update
+  - Add Sale Star, Chance Doll and Sonorous Whispers to default black list
+- Fix issue with non-shared items still being communicated as if they were shared
+- Add feature to also share Lunar Coins
+- Minor bug fixes
+- Less verbose rich text messages
+- Remove Log unlocking, as it was causing issues with pickups not getting destroyed
+
+### `2.8.0`
 - Add compatiblity with Yeet (and any other mod wishing to mark items as unsharable)
 - Add defense nucleus to default item blacklist
 - Restore functionality of the logbook and the item description windows (you may want to turn rich messages back on if you turned them off to fix this problem!)

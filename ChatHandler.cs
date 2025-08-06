@@ -82,13 +82,39 @@ namespace ShareSuite
             var pickupName = Language.GetString(pickupDef.nameToken);
             var playerColor = GetPlayerColor(player.playerCharacterMasterController);
             var itemCount = player.inventory.GetItemCount(pickupDef.itemIndex);
+            var itemCountText = itemCount == 0 ? "" : $" ({itemCount})";
+            var eligiblePlayers = GetEligiblePlayers(body);
+            var totalPlayers = PlayerCharacterMasterController.instances.Count;
 
             if (pickupDef.coinValue > 0)
             {
-                var coinMessage =
-                    $"<color=#{playerColor}>{body.GetUserName()}</color> <color=#{GrayColor}>picked up</color> " +
-                    $"<color=#{ColorUtility.ToHtmlStringRGB(pickupColor)}>" +
-                    $"{(string.IsNullOrEmpty(pickupName) ? "???" : pickupName)} ({pickupDef.coinValue})</color> <color=#{GrayColor}>for themselves.</color>";
+                var coinValueText = pickupDef.coinValue > 1 ? $" ({pickupDef.coinValue})" : "";
+                var coinMessage = "";
+                if (ShareSuite.LunarCoinsShared.Value)
+                {
+                    if (eligiblePlayers == totalPlayers - 1 && totalPlayers > 1)
+                    {
+                        coinMessage =
+                            $"<color=#{playerColor}>{body.GetUserName()}</color> <color=#{GrayColor}>picked up</color> " +
+                            $"<color=#{ColorUtility.ToHtmlStringRGB(pickupColor)}>" +
+                            $"{(string.IsNullOrEmpty(pickupName) ? "???" : pickupName)}{coinValueText}</color> <color=#{GrayColor}>for</color> <color=#{LinkColor}>everyone</color>.";
+                    }
+                    else
+                    {
+                        coinMessage =
+                            $"<color=#{playerColor}>{body.GetUserName()}</color> <color=#{GrayColor}>picked up</color> " +
+                            $"<color=#{ColorUtility.ToHtmlStringRGB(pickupColor)}>" +
+                            $"{(string.IsNullOrEmpty(pickupName) ? "???" : pickupName)}{coinValueText}</color> <color=#{GrayColor}>for themselves</color>" +
+                            $"{ItemPickupFormatter(body)}<color=#{GrayColor}>.</color>";
+                    }
+                }
+                else
+                {
+                    coinMessage =
+                        $"<color=#{playerColor}>{body.GetUserName()}</color> <color=#{GrayColor}>picked up</color> " +
+                        $"<color=#{ColorUtility.ToHtmlStringRGB(pickupColor)}>" +
+                        $"{(string.IsNullOrEmpty(pickupName) ? "???" : pickupName)}{coinValueText}</color> <color=#{GrayColor}>for themselves.</color>";
+                }
 
                 Chat.SendBroadcastChat(new Chat.SimpleChatMessage { baseToken = coinMessage });
 
@@ -100,17 +126,28 @@ namespace ShareSuite
                 var singlePickupMessage =
                     $"<color=#{playerColor}>{body.GetUserName()}</color> <color=#{GrayColor}>picked up</color> " +
                     $"<color=#{ColorUtility.ToHtmlStringRGB(pickupColor)}>" +
-                    $"{(string.IsNullOrEmpty(pickupName) ? "???" : pickupName)} ({itemCount})</color> <color=#{GrayColor}>for themselves. </color>" +
-                    $"<color=#{NotSharingColor}>(Item Set to NOT be Shared)</color>";
+                    $"{(string.IsNullOrEmpty(pickupName) ? "???" : pickupName)}{itemCountText}</color> <color=#{GrayColor}>for themselves.</color>";// +
+                    //$"<color=#{NotSharingColor}>(Item Set to NOT be Shared)</color>";
                 Chat.SendBroadcastChat(new Chat.SimpleChatMessage { baseToken = singlePickupMessage });
                 return;
             }
 
-            var pickupMessage =
-                $"<color=#{playerColor}>{body.GetUserName()}</color> <color=#{GrayColor}>picked up</color> " +
-                $"<color=#{ColorUtility.ToHtmlStringRGB(pickupColor)}>" +
-                $"{(string.IsNullOrEmpty(pickupName) ? "???" : pickupName)} ({itemCount})</color> <color=#{GrayColor}>for themselves</color>" +
-                $"{ItemPickupFormatter(body)}<color=#{GrayColor}>.</color>";
+            var pickupMessage = "";
+            if (eligiblePlayers == totalPlayers - 1 && totalPlayers > 1)
+            {
+                pickupMessage =
+                    $"<color=#{playerColor}>{body.GetUserName()}</color> <color=#{GrayColor}>picked up</color> " +
+                    $"<color=#{ColorUtility.ToHtmlStringRGB(pickupColor)}>" +
+                    $"{(string.IsNullOrEmpty(pickupName) ? "???" : pickupName)}{itemCountText}</color> <color=#{GrayColor}>for</color> <color=#{LinkColor}>everyone</color>.";
+            }
+            else
+            {
+                pickupMessage =
+                    $"<color=#{playerColor}>{body.GetUserName()}</color> <color=#{GrayColor}>picked up</color> " +
+                    $"<color=#{ColorUtility.ToHtmlStringRGB(pickupColor)}>" +
+                    $"{(string.IsNullOrEmpty(pickupName) ? "???" : pickupName)}{itemCountText}</color> <color=#{GrayColor}>for themselves</color>" +
+                    $"{ItemPickupFormatter(body)}<color=#{GrayColor}>.</color>";
+            }
             Chat.SendBroadcastChat(new Chat.SimpleChatMessage { baseToken = pickupMessage });
         }
 
@@ -132,11 +169,12 @@ namespace ShareSuite
             var pickupName = Language.GetString(pickupDef.nameToken);
             var playerColor = GetPlayerColor(player.playerCharacterMasterController);
             var itemCount = player.inventory.GetItemCount(pickupDef.itemIndex);
+            var itemCountText = itemCount == 0 ? "" : $" ({itemCount})";
 
             var pickupMessage =
                 $"<color=#{playerColor}>{body.GetUserName()}</color> <color=#{GrayColor}>traded for</color> " +
                 $"<color=#{ColorUtility.ToHtmlStringRGB(pickupColor)}>" +
-                $"{(string.IsNullOrEmpty(pickupName) ? "???" : pickupName)} ({itemCount})</color><color=#{GrayColor}>.</color>";
+                $"{(string.IsNullOrEmpty(pickupName) ? "???" : pickupName)}{itemCountText}</color><color=#{GrayColor}>.</color>";
             Chat.SendBroadcastChat(new Chat.SimpleChatMessage { baseToken = pickupMessage });
         }
 
@@ -210,7 +248,7 @@ namespace ShareSuite
                     var master = playerCharacterMasterController.master;
 
                     // If they don't have a body or are the one who picked up the item, go to the next person
-                    if (!master.hasBody || master.GetBody() == body) continue;
+                    if (!master.inventory || master.GetBody() == body) continue;
 
                     // Get the player color
                     var playerColor = GetPlayerColor(playerCharacterMasterController);
@@ -232,7 +270,7 @@ namespace ShareSuite
             {
                 var master = playerCharacterMasterController.master;
                 // If they don't have a body or are the one who picked up the item, go to the next person
-                if (!master.hasBody || master.GetBody() == body) continue;
+                if (!master.inventory || master.GetBody() == body) continue;
 
                 // If the player is dead/deadplayersgetitems is off, continue and add nothing
                 if (master.IsDeadAndOutOfLivesServer() && !ShareSuite.DeadPlayersGetItems.Value) continue;
@@ -264,7 +302,7 @@ namespace ShareSuite
         private static string GetPlayerColor(PlayerCharacterMasterController controllerMaster)
         {
             var playerLocation = PlayerCharacterMasterController.instances.IndexOf(controllerMaster);
-            return PlayerColors[playerLocation % 8];
+            return PlayerColors[playerLocation % PlayerColors.Length];
         }
 
         private static int GetEligiblePlayers(CharacterBody body)

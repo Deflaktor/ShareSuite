@@ -4,7 +4,6 @@ using BepInEx;
 using BepInEx.Configuration;
 using R2API.Utils;
 using RoR2;
-using ShareSuite.Networking;
 using UnityEngine;
 using UnityEngine.Networking;
 
@@ -16,7 +15,7 @@ namespace ShareSuite
 {
     [BepInDependency("com.bepis.r2api")]
     [BepInDependency("com.KingEnderBrine.InLobbyConfig", BepInDependency.DependencyFlags.SoftDependency)]
-    [BepInPlugin("com.funkfrog_sipondo.sharesuite", "ShareSuite", "2.8.0")]
+    [BepInPlugin("com.funkfrog_sipondo.sharesuite", "ShareSuite", "3.0.0")]
     [NetworkCompatibility(CompatibilityLevel.NoNeedForSync, VersionStrictness.DifferentModVersionsAreOk)]
     public class ShareSuite : BaseUnityPlugin
     {
@@ -35,6 +34,7 @@ namespace ShareSuite
             LunarItemsShared,
             BossItemsShared,
             VoidItemsShared,
+            LunarCoinsShared,
             RichMessagesEnabled,
             DropBlacklistedEquipmentOnShare,
             PrinterCauldronFixEnabled,
@@ -66,8 +66,6 @@ namespace ShareSuite
                 || !MoneyIsShared.Value
                 || MoneySharingHooks.MapTransitionActive
                 || !GeneralHooks.IsMultiplayer()) return;
-
-            NetworkHandler.RegisterHandlers();
 
             if (!NetworkServer.active) return;
 
@@ -185,6 +183,13 @@ namespace ShareSuite
                 "VoidItemsShared",
                 false,
                 "Toggles item sharing for void (purple/corrupted) items."
+            );
+
+            LunarCoinsShared = Config.Bind(
+                "Settings",
+                "LunarCoinsShared",
+                false,
+                "Toggles sharing for lunar coins."
             );
 
             RichMessagesEnabled = Config.Bind(
@@ -349,7 +354,7 @@ namespace ShareSuite
             ItemBlacklist = Config.Bind(
                 "Settings",
                 "ItemBlacklist",
-                "BeetleGland,TreasureCache,TitanGoldDuringTP,TPHealingNova,ArtifactKey,FreeChest,RoboBallBuddy,MinorConstructOnKill",
+                "BeetleGland,TreasureCache,TitanGoldDuringTP,TPHealingNova,ArtifactKey,FreeChest,RoboBallBuddy,MinorConstructOnKill,ExtraShrineItem,LowerPricedChests,ItemDropChanceOnKill",
                 "Items (by internal name) that you do not want to share, comma separated. Please find the item \"Code Names\" at: https://github.com/risk-of-thunder/R2Wiki/wiki/Item-&-Equipment-IDs-and-Names"
             );
             ItemBlacklist.SettingChanged += (o, e) => Blacklist.Recalculate();

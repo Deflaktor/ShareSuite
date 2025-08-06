@@ -1,15 +1,15 @@
-using System;
+using EntityStates.Scrapper;
+using Mono.Cecil.Cil;
+using MonoMod.Cil;
+using R2API.Utils;
 using RoR2;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using MonoMod.Cil;
-using R2API.Utils;
 using UnityEngine;
 using UnityEngine.Networking;
 using Random = UnityEngine.Random;
-using EntityStates.Scrapper;
-using ShareSuite.Networking;
 
 namespace ShareSuite
 {
@@ -55,6 +55,9 @@ namespace ShareSuite
             if (ShareSuite.OverrideVoidFieldLootScalingEnabled.Value)
             {
                 IL.RoR2.ArenaMissionController.EndRound += ArenaDropEnable;
+            }
+            if(ShareSuite.OverrideSimulacrumLootScalingEnabled.Value)
+            {
                 IL.RoR2.InfiniteTowerWaveController.DropRewards += SimulacrumArenaDropEnable;
             }
 
@@ -167,18 +170,10 @@ namespace ShareSuite
                     // Do not give an additional item to the player who picked it up.
                     if (player.inventory == body.inventory)
                     {
-                        // Do not send the message to unlock if it's the local player.
-                        if (player.isLocalPlayer)
-                        {
-                            continue;
-                        }
-
-                        NetworkHandler.SendItemPickupMessage(player.playerCharacterMasterController.networkUser.connectionToClient.connectionId, item.pickupIndex);
-
                         continue;
                     }
 
-                    if (ShareSuite.RandomizeSharedPickups.Value)
+                    if (ShareSuite.RandomizeSharedPickups.Value && item.miscPickupIndex != RoR2Content.MiscPickups.LunarCoin.miscPickupIndex)
                     {
                         var pickupIndex = GetRandomItemOfTier(itemDef.tier, item.pickupIndex);
                         if (pickupIndex == null)
@@ -209,7 +204,17 @@ namespace ShareSuite
                 if (ShareSuite.RandomizeSharedPickups.Value)
                 {
                     orig(self, body);
-                    ChatHandler.SendRichRandomizedPickupMessage(master, self, randomizedPlayerDict);
+
+                    // if they are all the same item, its not randomized at all
+                    var allSamePickupIndex = randomizedPlayerDict.Values.Select(pickupDef => pickupDef.pickupIndex).Distinct().Count() == 1;
+                    if(allSamePickupIndex)
+                    {
+                        ChatHandler.SendRichPickupMessage(master, self);
+                    } 
+                    else
+                    {
+                        ChatHandler.SendRichRandomizedPickupMessage(master, self, randomizedPlayerDict);
+                    }
                     return;
                 }
             }
@@ -218,8 +223,6 @@ namespace ShareSuite
 
             ChatHandler.SendRichPickupMessage(master, self);
 
-            // ReSharper disable once PossibleNullReferenceException
-            HandleRichMessageUnlockAndNotification(master, item.pickupIndex);
         }
 
         // Deprecated
@@ -302,14 +305,16 @@ namespace ShareSuite
                 {
                     var characterBody = activator.GetComponent<CharacterBody>();
                     var inventory = characterBody.inventory;
+                    var pickupDef = PickupCatalog.GetPickupDef(shop.CurrentPickupIndex());
+                    var itemIndex = pickupDef?.itemIndex;
 
-
-                    var item = PickupCatalog.GetPickupDef(shop.CurrentPickupIndex())?.itemIndex;
-
-                    if (item == null) MonoBehaviour.print("ShareSuite: PickupCatalog is null.");
-                    else
+                    if (itemIndex != null || pickupDef.miscPickupIndex == RoR2Content.MiscPickups.LunarCoin.miscPickupIndex)
                     {
                         HandleGiveItem(characterBody.master, PickupCatalog.GetPickupDef(shop.CurrentPickupIndex()));
+                    }
+                    else
+                    {
+                        MonoBehaviour.print("ShareSuite: PickupCatalog is null.");
                     }
 
                     orig(self, activator);
@@ -447,6 +452,11 @@ namespace ShareSuite
                 return false;
             }
 
+            if(pickupDef != null && pickupDef.miscPickupIndex == RoR2Content.MiscPickups.LunarCoin.miscPickupIndex)
+            {
+                return ShareSuite.LunarCoinsShared.Value;
+            }
+
             return false;
         }
 
@@ -527,29 +537,18 @@ namespace ShareSuite
 
         private static void HandleGiveItem(CharacterMaster characterMaster, PickupDef pickupDef)
         {
-            characterMaster.inventory.GiveItem(pickupDef.itemIndex);
-
-            var connectionId = characterMaster.playerCharacterMasterController.networkUser?.connectionToClient?.connectionId;
-
-            if (connectionId != null)
+            if (pickupDef.itemIndex != ItemIndex.None)
             {
-                NetworkHandler.SendItemPickupMessage(connectionId.Value, pickupDef.pickupIndex);
+                characterMaster.inventory.GiveItem(pickupDef.itemIndex);
             }
-        }
-
-        public static void HandleRichMessageUnlockAndNotification(CharacterMaster characterMaster, PickupIndex pickupIndex)
-        {
-            // No need if rich messages are disabled
-            if (!ShareSuite.RichMessagesEnabled.Value || !characterMaster.isLocalPlayer)
-            {
-                return;
-            }
-
-            characterMaster.playerCharacterMasterController?.networkUser?.localUser?.userProfile.DiscoverPickup(pickupIndex);
-
-            if (characterMaster.inventory.GetItemCount(PickupCatalog.GetPickupDef(pickupIndex).itemIndex) <= 1)
-            {
-                CharacterMasterNotificationQueue.PushPickupNotification(characterMaster, pickupIndex);
+            if(pickupDef.coinValue > 0) {
+                var networkUser = characterMaster.playerCharacterMasterController.networkUser;
+                if (networkUser != null)
+                {
+                    if (networkUser.lunarCoins <= uint.MaxValue - pickupDef.coinValue) {
+                        networkUser.AwardLunarCoins(pickupDef.coinValue);
+                    }
+                }
             }
         }
     }
