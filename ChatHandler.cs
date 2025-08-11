@@ -28,10 +28,6 @@ namespace ShareSuite
 
         private const string NotSharingColor = "f07d6e";
 
-        // Red (previously bc2525) / Blue / Yellow / Green / Orange / Cyan / Pink / Deep Purple
-        private static readonly string[] PlayerColors =
-            {"f23030", "2083fc", "f1f41a", "4dc344", "f27b0c", "3cdede", "db46bd", "9400ea"};
-
         public static void SendIntroMessage(On.RoR2.Chat.orig_SendPlayerConnectedMessage orig, NetworkUser user)
         {
             orig(user);
@@ -312,10 +308,19 @@ namespace ShareSuite
         }
 
         // Returns the player color as a hex string w/o the #
-        private static string GetPlayerColor(PlayerCharacterMasterController controllerMaster)
+        private static string GetPlayerColor(PlayerCharacterMasterController pc)
         {
-            var playerLocation = PlayerCharacterMasterController.instances.IndexOf(controllerMaster);
-            return PlayerColors[playerLocation % PlayerColors.Length];
+            var userName = pc.GetDisplayName();
+            var survivorDef = SurvivorCatalog.FindSurvivorDefFromBody(pc.master?.bodyPrefab);
+            if (survivorDef != null && survivorDef.primaryColor != null) {
+                return ColorUtility.ToHtmlStringRGB(survivorDef.primaryColor);
+            }
+            var body = pc.master?.GetBody();
+            if (body != null && body.bodyColor != null)
+            {
+                return ColorUtility.ToHtmlStringRGB(body.bodyColor);
+            }
+            return "f27b0c";
         }
 
         private static int GetEligiblePlayers(CharacterBody body)
