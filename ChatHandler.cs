@@ -69,6 +69,9 @@ namespace ShareSuite
         public static void SendRichPickupMessage(CharacterMaster player, GenericPickupController pickupController)
         {
             PickupDef pickupDef = PickupCatalog.GetPickupDef(pickupController.pickupIndex);
+
+            if (pickupDef == null) return;
+
             var body = player.hasBody ? player.GetBody() : null;
 
             if (!GeneralHooks.IsMultiplayer() || body == null || !ShareSuite.RichMessagesEnabled.Value)
@@ -90,9 +93,9 @@ namespace ShareSuite
             {
                 var coinValueText = pickupDef.coinValue > 1 ? $" ({pickupDef.coinValue})" : "";
                 var coinMessage = "";
-                if (ShareSuite.LunarCoinsShared.Value)
+                if (ShareSuite.LunarCoinsShared.Value && eligiblePlayers > 0)
                 {
-                    if (eligiblePlayers == totalPlayers - 1 && totalPlayers > 1)
+                    if (eligiblePlayers == totalPlayers - 1)
                     {
                         coinMessage =
                             $"<color=#{playerColor}>{body.GetUserName()}</color> <color=#{GrayColor}>picked up</color> " +
@@ -113,7 +116,7 @@ namespace ShareSuite
                     coinMessage =
                         $"<color=#{playerColor}>{body.GetUserName()}</color> <color=#{GrayColor}>picked up</color> " +
                         $"<color=#{ColorUtility.ToHtmlStringRGB(pickupColor)}>" +
-                        $"{(string.IsNullOrEmpty(pickupName) ? "???" : pickupName)}{coinValueText}</color> <color=#{GrayColor}>for themselves.</color>";
+                        $"{(string.IsNullOrEmpty(pickupName) ? "???" : pickupName)}{coinValueText}</color><color=#{GrayColor}>.</color>";
                 }
 
                 Chat.SendBroadcastChat(new Chat.SimpleChatMessage { baseToken = coinMessage });
@@ -126,14 +129,14 @@ namespace ShareSuite
                 var singlePickupMessage =
                     $"<color=#{playerColor}>{body.GetUserName()}</color> <color=#{GrayColor}>picked up</color> " +
                     $"<color=#{ColorUtility.ToHtmlStringRGB(pickupColor)}>" +
-                    $"{(string.IsNullOrEmpty(pickupName) ? "???" : pickupName)}{itemCountText}</color> <color=#{GrayColor}>for themselves.</color>";// +
+                    $"{(string.IsNullOrEmpty(pickupName) ? "???" : pickupName)}{itemCountText}</color><color=#{GrayColor}>.</color>";// +
                     //$"<color=#{NotSharingColor}>(Item Set to NOT be Shared)</color>";
                 Chat.SendBroadcastChat(new Chat.SimpleChatMessage { baseToken = singlePickupMessage });
                 return;
             }
 
             var pickupMessage = "";
-            if (eligiblePlayers == totalPlayers - 1 && totalPlayers > 1)
+            if (eligiblePlayers == totalPlayers - 1 && eligiblePlayers > 0)
             {
                 pickupMessage =
                     $"<color=#{playerColor}>{body.GetUserName()}</color> <color=#{GrayColor}>picked up</color> " +
@@ -142,11 +145,21 @@ namespace ShareSuite
             }
             else
             {
-                pickupMessage =
-                    $"<color=#{playerColor}>{body.GetUserName()}</color> <color=#{GrayColor}>picked up</color> " +
-                    $"<color=#{ColorUtility.ToHtmlStringRGB(pickupColor)}>" +
-                    $"{(string.IsNullOrEmpty(pickupName) ? "???" : pickupName)}{itemCountText}</color> <color=#{GrayColor}>for themselves</color>" +
-                    $"{ItemPickupFormatter(body)}<color=#{GrayColor}>.</color>";
+                if (eligiblePlayers == 0)
+                {
+                    pickupMessage =
+                        $"<color=#{playerColor}>{body.GetUserName()}</color> <color=#{GrayColor}>picked up</color> " +
+                        $"<color=#{ColorUtility.ToHtmlStringRGB(pickupColor)}>" +
+                        $"{(string.IsNullOrEmpty(pickupName) ? "???" : pickupName)}{itemCountText}</color><color=#{GrayColor}>.</color>";
+                }
+                else
+                {
+                    pickupMessage =
+                        $"<color=#{playerColor}>{body.GetUserName()}</color> <color=#{GrayColor}>picked up</color> " +
+                        $"<color=#{ColorUtility.ToHtmlStringRGB(pickupColor)}>" +
+                        $"{(string.IsNullOrEmpty(pickupName) ? "???" : pickupName)}{itemCountText}</color> <color=#{GrayColor}>for themselves</color>" +
+                        $"{ItemPickupFormatter(body)}<color=#{GrayColor}>.</color>";
+                }
             }
             Chat.SendBroadcastChat(new Chat.SimpleChatMessage { baseToken = pickupMessage });
         }
